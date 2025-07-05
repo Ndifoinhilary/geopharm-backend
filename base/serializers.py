@@ -69,7 +69,7 @@ class VerifyUserSerializer(serializers.Serializer):
                     "token": user.otp_code,
                     "username": user.username,
                     "expiration": user.otp_expiry,
-                    "app_name": "ResolveMeQ",
+                    "app_name": "GeoPharm",
                     "verification_link": settings.FRONTEND_URL + reverse('verify-user'),
                 }
                 send_email_with_template(data, 'welcome.html', context, [user.email])
