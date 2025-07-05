@@ -10,9 +10,9 @@ from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, permissions
 from rest_framework.generics import GenericAPIView
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import Profile
@@ -130,7 +130,7 @@ class LoginAPIView(GenericAPIView):
             if user.is_locked():
                 return Response({
                     "message": "Account temporarily locked due to too many failed login attempts. Try again later.",
-                    "locked_until": settings.LOCK_UNTIL
+                    "locked_until": f"{settings.LOCK_UNTIL // 60} minutes"
                 }, status=status.HTTP_403_FORBIDDEN)
 
             if not user.is_verified:
@@ -150,7 +150,7 @@ class LoginAPIView(GenericAPIView):
                     "refresh_token": str(token),
                 }, status=status.HTTP_200_OK)
             else:
-                user.increment_failed_logins()
+                user.increment_login_attempts()
                 return Response({
                     "message": "Invalid credentials",
                 }, status=status.HTTP_400_BAD_REQUEST)
@@ -179,7 +179,7 @@ class ChangePasswordAPIView(GenericAPIView):
     )
     def post(self, request, *args, **kwargs):
         """
-          Handle password change request  and the user must be login to carry out this request.
+          Handle password change request and the user must be login to carry out this request.
         :param request:
         :param args:
         :param kwargs:
@@ -321,7 +321,7 @@ class ChangeEmailAPIView(GenericAPIView):
         }, status=status.HTTP_200_OK)
 
 
-class LogoutAPIView(APIView):
+class LogoutAPIView(GenericAPIView):
     """
     API view for user logout.
     You must be authenticated to log out.
@@ -330,6 +330,17 @@ class LogoutAPIView(APIView):
 
     @swagger_auto_schema(
         operation_description="API for user logout. You must be authenticated to log out.",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'refresh_token': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    description='JWT refresh token to blacklist',
+                    example='eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...'
+                ),
+            },
+            required=['refresh_token']
+        ),
         responses={
             200: openapi.Response("Successfully logged out"),
             401: openapi.Response("Authentication credentials were not provided"),
@@ -362,6 +373,7 @@ class CurrentUserAPIView(GenericAPIView):
     """
     permission_classes = [IsAuthenticated]
     serializer_class = UpdateUserDetailsSerializer
+    parser_classes = [FormParser, MultiPartParser]
 
     @swagger_auto_schema(
         operation_description="Get current authenticated user details or Get your profile details",
@@ -382,6 +394,15 @@ class CurrentUserAPIView(GenericAPIView):
 
     @swagger_auto_schema(
         operation_description="Update current authenticated user details. update your profile details",
+        manual_parameters=[
+            openapi.Parameter(
+                'profile_image',
+                openapi.IN_FORM,
+                description="Profile image file",
+                type=openapi.TYPE_FILE,
+                required=False
+            )
+        ],
         responses={
             200: openapi.Response("User details updated successfully"),
             400: openapi.Response("Invalid data provided"),

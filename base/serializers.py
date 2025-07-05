@@ -9,7 +9,7 @@ from django.utils.crypto import constant_time_compare
 from django.utils.translation import gettext as _
 from rest_framework import serializers
 
-from .models import User, Profile  # Import the actual User model class instead of using settings.AUTH_USER_MODEL
+from .models import User, Profile
 from .utils import generate_otp_code, validate_password_strength, send_email_with_template
 
 logger = logging.getLogger(__name__)

@@ -345,12 +345,16 @@ class Profile(BaseModel):
 
     location = models.CharField(
         max_length=300,
+        blank=True,
+        null=True,
         verbose_name='Location',
         help_text="The location of the user, e.g., country or city"
     )
 
     city = models.CharField(
         max_length=300,
+        blank=True,
+        null=True,
         verbose_name='City',
         help_text="The city where the user resides"
     )

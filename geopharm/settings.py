@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.gis',
     "phonenumber_field",
     'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'base',
     'pharm',
@@ -147,7 +148,7 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'anon': '100/day',
         'user': '1000/day',
-        'login': '5/min',
+        'login': '3/min',
         'signup': '3/min',
         'password_reset': '3/hour',
         'verification_code': '3/hour',
@@ -158,6 +159,11 @@ REST_FRAMEWORK = {
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=30),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=75),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "UPDATE_LAST_LOGIN": False,
+    "ALGORITHM": "HS256",
+    "SIGNING_KEY": SECRET_KEY,
 }
 # Cors settings
 CORS_ALLOWED_ORIGINS = [

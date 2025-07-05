@@ -8,7 +8,7 @@ from django.db.models import Q, Count, Avg, Sum, F
 from django.utils import timezone
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import status, permissions, filters
+from rest_framework import status, permissions, filters, parsers
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
@@ -299,7 +299,7 @@ def pharmacist_dashboard(request):
 class DrugViewSet(ModelViewSet):
     """
     ViewSet for managing drugs with search and autocomplete functionality
-    (Only admin users can create drugs in the system)
+    (Only admin users can perform CRUD on drugs in the system)
     """
     queryset = Drug.objects.select_related('category')
     serializer_class = DrugSerializer
@@ -440,17 +440,32 @@ class PharmacyViewSet(ModelViewSet):
 
     def get_serializer_class(self):
 
-        if self.action == 'create':
+        if self.action in ['create', 'update', 'partial_update']:
             return PharmacyApplicationSerializer
         return PharmacySerializer
 
+    def get_parsers(self):
+        """
+        Override parsers based on action.
+        Use MultiPartParser and FormParser to create an action to handle file uploads.
+        :return: List of parser classes
+        """
+        if self.request.method in ['POST', 'PUT', 'PATCH']:
+            return [parsers.MultiPartParser(), parsers.FormParser()]
+
+        return super().get_parsers()
+
     def get_permissions(self):
         """
-        Custom permission logic to allow all authenticated users to view pharmacies,
+        Custom permission logic to allow all authenticated users to view pharmacies
         but restrict creation to pharmacy owners.
         """
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+        if self.action in ['update', 'partial_update', 'destroy']:
             self.permission_classes = [IsPharmacyOwner]
+
+        elif self.action in ['create']:
+            self.permission_classes = [permissions.IsAuthenticated]
+
         else:
             self.permission_classes = [permissions.IsAuthenticated]
         return super().get_permissions()

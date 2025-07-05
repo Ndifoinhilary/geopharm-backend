@@ -145,6 +145,7 @@ class Drug(BaseModel):
     image = models.ImageField(
         upload_to=upload_image_path,
         blank=True,
+        null=True,
         verbose_name=_("Image"),
         help_text=_("The image of the drug")
     )
