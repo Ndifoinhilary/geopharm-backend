@@ -93,6 +93,14 @@ python manage.py migrate
 # Create superuser account
 python manage.py createsuperuser
 ```
+## Using docker-compose (Optional)
+If you prefer using Docker, you can set up the project with Docker Compose:
+you don't need to manually make migrations or create superuser account, as these will be handled by the Docker setup.
+```bash
+# Build and run the Docker containers
+docker-compose up --build
+# Access the application at http://localhost:8000
+```
 
 ### 6. Generate Mock Data (Optional)
 ```bash
