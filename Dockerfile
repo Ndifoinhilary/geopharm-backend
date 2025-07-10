@@ -70,6 +70,7 @@ CMD ["/bin/bash", "-c", "\
     python manage.py check --database default && \
     python manage.py makemigrations && \
     python manage.py migrate --noinput && \
+    mkdir -p /app/static && \
     python manage.py collectstatic --noinput && \
     if [ \"${GENERATE_MOCK_DATA:-false}\" = \"true\" ]; then \
         echo '📊 Generating mock data...' && \
