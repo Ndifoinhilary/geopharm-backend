@@ -1,8 +1,11 @@
 #!/bin/bash
 set -e
 
+# Use Render's provided PORT or fallback to 8000
+PORT=${PORT:-8000}
+
 echo "=== Starting Deployment ==="
-echo "PORT: 8000"
+echo "PORT: $PORT"
 echo "Current directory: $(pwd)"
 
 echo "=== Testing Django Setup ==="
@@ -15,13 +18,13 @@ echo "=== Waiting for database ==="
 python manage.py wait_for_db || {
     echo "Database wait failed!"
     echo "Trying to start without database operations..."
-    exec gunicorn geopharm.wsgi:application --bind 0.0.0.0:8000 --log-level debug
+    exec gunicorn geopharm.wsgi:application --bind 0.0.0.0:$PORT --log-level debug
 }
 
 echo "=== Running migrations ==="
 python manage.py migrate || {
     echo "Migration failed! Starting server anyway..."
-    exec gunicorn geopharm.wsgi:application --bind 0.0.0.0:8000 --log-level debug
+    exec gunicorn geopharm.wsgi:application --bind 0.0.0.0:$PORT --log-level debug
 }
 
 echo "=== Generating mock data ==="
@@ -36,7 +39,7 @@ python manage.py collectstatic --noinput || {
 
 echo "=== Starting Gunicorn ==="
 exec gunicorn geopharm.wsgi:application \
-    --bind 0.0.0.0:8000 \
+    --bind 0.0.0.0:$PORT \
     --workers 2 \
     --timeout 120 \
     --log-level info \
