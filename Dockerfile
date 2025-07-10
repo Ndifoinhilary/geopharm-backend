@@ -6,32 +6,18 @@ ENV PYTHONUNBUFFERED=1 \
     PATH="/py/bin:$PATH" \
     DEBIAN_FRONTEND=noninteractive
 
-# Package installation (unchanged)
-RUN apt-get update --fix-missing || apt-get update --fix-missing || apt-get update --fix-missing
-
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
         python3-dev \
         libffi-dev \
         libssl-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
         libpq-dev \
         postgresql-client \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
         gdal-bin \
         libgdal-dev \
         libproj-dev \
         libgeos-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
         curl \
         libjpeg-dev \
         zlib1g-dev \
@@ -44,11 +30,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV GDAL_LIBRARY_PATH="/usr/lib/x86_64-linux-gnu/libgdal.so"
 ENV GEOS_LIBRARY_PATH="/usr/lib/x86_64-linux-gnu/libgeos_c.so"
 
-# Copy requirements and install Python dependencies
+# Install Python dependencies
 COPY requirements.txt /tmp/requirements.txt
-
-ARG DEV=false
-
 RUN /py/bin/pip install --upgrade pip && \
     /py/bin/pip install --no-cache-dir -r /tmp/requirements.txt && \
     rm -rf /tmp/*
@@ -59,14 +42,12 @@ RUN useradd --create-home --shell /bin/bash django-user && \
     chown -R django-user:django-user /vol && \
     chmod -R 755 /vol
 
-# Set working directory
+# Set working directory and create logs directory
 WORKDIR /app
-
-# Create logs directory and set permissions
 RUN mkdir -p /app/logs && \
     chown -R django-user:django-user /app/logs
 
-# Copy application code and change ownership
+# Copy application code
 COPY --chown=django-user:django-user . /app
 
 # Switch to non-root user
@@ -74,34 +55,23 @@ USER django-user
 
 EXPOSE 8000
 
-# Set default environment variables for production
+# Set production environment variables
 ENV SECRET_KEY="${SECRET_KEY:-temporary-secret-key-for-testing-only}" \
     DEBUG="${DEBUG:-False}" \
     DJANGO_SETTINGS_MODULE="${DJANGO_SETTINGS_MODULE:-geopharm.settings}" \
     PORT="${PORT:-8000}"
 
-# Direct startup commands with debugging
+# Production startup with optional mock data
 CMD ["/bin/bash", "-c", "\
-    echo '🚀 CONTAINER STARTUP DEBUG' && \
-    echo '==========================' && \
-    echo \"Date: $(date)\" && \
-    echo \"User: $(whoami)\" && \
-    echo \"Working Dir: $(pwd)\" && \
-    echo '🔍 ENVIRONMENT CHECK' && \
-    echo \"PORT: ${PORT}\" && \
-    echo \"DEBUG: ${DEBUG}\" && \
-    echo \"SECRET_KEY: ${SECRET_KEY:0:10}...\" && \
-    echo \"DATABASE_URL: ${DATABASE_URL:0:30}...\" && \
-    echo '🐍 PYTHON CHECK' && \
-    python --version && \
-    echo '📦 DJANGO CHECK' && \
-    python -c 'import django; print(f\"✅ Django {django.get_version()}\")' && \
-    echo '⚙️ DJANGO SETUP TEST' && \
-    python -c 'import django; django.setup(); from django.conf import settings; print(f\"✅ ALLOWED_HOSTS: {settings.ALLOWED_HOSTS}\")' && \
-    echo '🗄️ DATABASE OPERATIONS' && \
+    echo '🚀 Starting Geopharm API Server...' && \
     python manage.py check --database default && \
     python manage.py migrate --noinput && \
-    echo \"🚀 STARTING SERVER ON PORT ${PORT}\" && \
+    python manage.py collectstatic --noinput && \
+    if [ \"${GENERATE_MOCK_DATA:-false}\" = \"true\" ]; then \
+        echo '📊 Generating mock data...' && \
+        python manage.py generate_mock_data; \
+    fi && \
+    echo '✅ Server starting on port ${PORT}' && \
     exec gunicorn geopharm.wsgi:application \
         --bind 0.0.0.0:${PORT} \
         --workers 2 \
