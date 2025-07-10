@@ -62,6 +62,10 @@ RUN useradd --create-home --shell /bin/bash django-user && \
 # Set working directory
 WORKDIR /app
 
+# Create logs directory and set permissions
+RUN mkdir -p /app/logs && \
+    chown -R django-user:django-user /app/logs
+
 # Copy application code and change ownership
 COPY --chown=django-user:django-user . /app
 
