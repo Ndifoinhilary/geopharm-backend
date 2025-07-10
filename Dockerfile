@@ -42,13 +42,16 @@ RUN useradd --create-home --shell /bin/bash django-user && \
     chown -R django-user:django-user /vol && \
     chmod -R 755 /vol
 
-# Set working directory and create logs directory
+# Set working directory and create necessary directories
 WORKDIR /app
-RUN mkdir -p /app/logs && \
-    chown -R django-user:django-user /app/logs
+RUN mkdir -p /app/logs /app/staticfiles /app/static && \
+    chown -R django-user:django-user /app
 
 # Copy application code
 COPY --chown=django-user:django-user . /app
+
+# Ensure all directories have correct permissions after copy
+RUN chown -R django-user:django-user /app
 
 # Switch to non-root user
 USER django-user
@@ -61,10 +64,11 @@ ENV SECRET_KEY="${SECRET_KEY:-temporary-secret-key-for-testing-only}" \
     DJANGO_SETTINGS_MODULE="${DJANGO_SETTINGS_MODULE:-geopharm.settings}" \
     PORT="${PORT:-8000}"
 
-# Production startup with optional mock data
+# Production startup with migrations, static files, and optional mock data
 CMD ["/bin/bash", "-c", "\
     echo '🚀 Starting Geopharm API Server...' && \
     python manage.py check --database default && \
+    python manage.py makemigrations && \
     python manage.py migrate --noinput && \
     python manage.py collectstatic --noinput && \
     if [ \"${GENERATE_MOCK_DATA:-false}\" = \"true\" ]; then \
