@@ -77,30 +77,32 @@ ENV SECRET_KEY="${SECRET_KEY:-temporary-secret-key-for-testing-only}" \
     PORT="${PORT:-8000}"
 
 # Direct startup commands with debugging
-CMD echo "🚀 CONTAINER STARTUP DEBUG" && \
-    echo "==========================" && \
-    echo "Date: $(date)" && \
-    echo "User: $(whoami)" && \
-    echo "Working Dir: $(pwd)" && \
-    echo "🔍 ENVIRONMENT CHECK" && \
-    echo "PORT: ${PORT}" && \
-    echo "DEBUG: ${DEBUG}" && \
-    echo "SECRET_KEY: ${SECRET_KEY:0:10}..." && \
-    echo "DATABASE_URL: ${DATABASE_URL:0:30}..." && \
-    echo "🐍 PYTHON CHECK" && \
+CMD ["/bin/bash", "-c", "\
+    echo '🚀 CONTAINER STARTUP DEBUG' && \
+    echo '==========================' && \
+    echo \"Date: $(date)\" && \
+    echo \"User: $(whoami)\" && \
+    echo \"Working Dir: $(pwd)\" && \
+    echo '🔍 ENVIRONMENT CHECK' && \
+    echo \"PORT: ${PORT}\" && \
+    echo \"DEBUG: ${DEBUG}\" && \
+    echo \"SECRET_KEY: ${SECRET_KEY:0:10}...\" && \
+    echo \"DATABASE_URL: ${DATABASE_URL:0:30}...\" && \
+    echo '🐍 PYTHON CHECK' && \
     python --version && \
-    echo "📦 DJANGO CHECK" && \
-    python -c "import django; print(f'✅ Django {django.get_version()}')" && \
-    echo "⚙️ DJANGO SETUP TEST" && \
-    python -c "import django; django.setup(); from django.conf import settings; print(f'✅ ALLOWED_HOSTS: {settings.ALLOWED_HOSTS}')" && \
-    echo "🗄️ DATABASE OPERATIONS" && \
+    echo '📦 DJANGO CHECK' && \
+    python -c 'import django; print(f\"✅ Django {django.get_version()}\")' && \
+    echo '⚙️ DJANGO SETUP TEST' && \
+    python -c 'import django; django.setup(); from django.conf import settings; print(f\"✅ ALLOWED_HOSTS: {settings.ALLOWED_HOSTS}\")' && \
+    echo '🗄️ DATABASE OPERATIONS' && \
     python manage.py check --database default && \
     python manage.py migrate --noinput && \
-    echo "🚀 STARTING SERVER ON PORT ${PORT}" && \
+    echo \"🚀 STARTING SERVER ON PORT ${PORT}\" && \
     exec gunicorn geopharm.wsgi:application \
         --bind 0.0.0.0:${PORT} \
         --workers 2 \
         --timeout 30 \
         --log-level info \
         --access-logfile - \
-        --error-logfile -
+        --error-logfile - \
+    "]
