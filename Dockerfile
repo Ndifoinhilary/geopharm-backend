@@ -1,4 +1,3 @@
-# Solution 1: Use Ubuntu-based image (often more reliable)
 FROM python:3.11-slim
 
 LABEL maintainer="Ndifoin Hilary"
@@ -7,10 +6,9 @@ ENV PYTHONUNBUFFERED=1 \
     PATH="/py/bin:$PATH" \
     DEBIAN_FRONTEND=noninteractive
 
-# Solution 2: Add retry logic and use multiple mirrors
+# Your existing package installation (unchanged)
 RUN apt-get update --fix-missing || apt-get update --fix-missing || apt-get update --fix-missing
 
-# Solution 3: Install packages in smaller groups to isolate issues
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
         python3-dev \
@@ -61,13 +59,22 @@ RUN useradd --create-home --shell /bin/bash django-user && \
     chown -R django-user:django-user /vol && \
     chmod -R 755 /vol
 
-# Set working directory and copy application code
+# Set working directory
 WORKDIR /app
+
+# Copy start.sh BEFORE switching to django-user
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
+# Copy application code and change ownership
 COPY --chown=django-user:django-user . /app
+
+# Make sure django-user owns the start.sh script
+RUN chown django-user:django-user /app/start.sh
 
 # Switch to non-root user
 USER django-user
 
 EXPOSE 8000
 
-CMD ["gunicorn", "geopharm.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["./start.sh"]
